@@ -36,7 +36,7 @@ describe("Widget Helper Integration Tests", () => {
       exposeAsTool: false,
     });
 
-    // Widget without exposeAsTool (should default to true)
+    // Widget without exposeAsTool (should default to false)
     server.uiResource({
       type: "appsSdk",
       name: "auto-widget",
@@ -185,15 +185,15 @@ describe("Widget Helper Integration Tests", () => {
       expect((result.content as any)[0]?.text).toContain("not found");
     });
 
-    it("should be callable as tool when exposeAsTool is undefined (default)", async () => {
-      // Call the auto-widget tool (should succeed)
+    it("should not be callable as tool when exposeAsTool is undefined (default is false)", async () => {
+      // Attempt to call the auto-widget tool (should return error — not auto-registered)
       const result = await client.callTool({
         name: "auto-widget",
         arguments: { message: "test" },
       });
 
-      expect(result).toBeDefined();
-      expect(result.content).toBeDefined();
+      expect(result.isError).toBe(true);
+      expect((result.content as any)[0]?.text).toContain("not found");
     });
 
     it("should be callable as tool when exposeAsTool is true", async () => {
@@ -216,9 +216,9 @@ describe("Widget Helper Integration Tests", () => {
         arguments: { message: "test" },
       });
 
-      // Call auto-registered widget tool
+      // Call auto-registered widget tool (explicit-auto-widget has exposeAsTool: true)
       const autoResult = await client.callTool({
-        name: "auto-widget",
+        name: "explicit-auto-widget",
         arguments: { message: "test" },
       });
 
@@ -244,7 +244,7 @@ describe("Widget Helper Integration Tests", () => {
       // Verify widget metadata is on tool definitions (tools/list), not on results
       const { tools } = await client.listTools();
       const manualTool = tools.find((t) => t.name === "manual-comparison-tool");
-      const autoTool = tools.find((t) => t.name === "auto-widget");
+      const autoTool = tools.find((t) => t.name === "explicit-auto-widget");
 
       expect(manualTool).toBeDefined();
       expect(manualTool!._meta).toBeDefined();
@@ -259,7 +259,7 @@ describe("Widget Helper Integration Tests", () => {
         const autoUri = (autoTool!._meta as Record<string, unknown>)?.[
           "openai/outputTemplate"
         ] as string;
-        expect(autoUri).toMatch(/^ui:\/\/widget\/auto-widget/);
+        expect(autoUri).toMatch(/^ui:\/\/widget\/explicit-auto-widget/);
       }
 
       const manualUri = (manualTool!._meta as Record<string, unknown>)?.[
